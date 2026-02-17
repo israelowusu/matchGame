@@ -12,7 +12,9 @@ const char tile_chars[TILE_TYPES] = { '#', '@', '$', '%', '&' };
 
 char board[BOARD_SIZE][BOARD_SIZE];
 
+int score = 200;
 Vector2 grid_origin;
+Texture2D background;
 
 char random_tile() {
     return tile_chars[rand() % TILE_TYPES];
@@ -42,6 +44,8 @@ int main(void) {
     SetTargetFPS(60);
     srand(time(NULL));
 
+    background = LoadTexture("assets/background.jpg");
+
     init_board();
 
     while (!WindowShouldClose()) {
@@ -49,6 +53,18 @@ int main(void) {
 
         BeginDrawing();
         ClearBackground(BLACK);
+
+        DrawTexturePro(
+            background,
+            (Rectangle) {
+                0, 0, background.width, background.height},
+            (Rectangle) {
+                0, 0, GetScreenWidth(), GetScreenHeight()
+            },
+            (Vector2) { 0, 0 },
+            0.0f,
+            WHITE
+        );
 
         for (int y = 0; y < BOARD_SIZE; y++) {
             for (int x = 0; x < BOARD_SIZE; x++) {
@@ -64,14 +80,19 @@ int main(void) {
                 DrawTextEx(GetFontDefault(),
                     TextFormat("%c", board[y][x]),
                     (Vector2) {
-                        rect.x + 12, rect.y +8
+                        rect.x + 12,
+                        rect.y +8
                     },
                     20, 1, WHITE);
             }
         }
 
+        DrawText(TextFormat("SCORE: %d", score), 20, 20, 24, BLUE);
+
         EndDrawing();
     }
+
+    UnloadTexture(background);
 
     CloseWindow();
     return 0;
