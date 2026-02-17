@@ -17,6 +17,7 @@ int score = 200;
 Vector2 grid_origin;
 Texture2D background;
 Font score_font;
+Vector2 selected_tile = { -1, -1 };
 
 char random_tile() {
     return tile_chars[rand() % TILE_TYPES];
@@ -50,9 +51,18 @@ int main(void) {
     score_font = LoadFontEx("assets/04B_03__.TTF", SCORE_FONT_SIZE, NULL, 0);
 
     init_board();
+    Vector2 mouse = { 0, 0 };
 
     while (!WindowShouldClose()) {
         // game logic
+        mouse = GetMousePosition();
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            int x = (mouse.x - grid_origin.x) / TILE_SIZE;
+            int y = (mouse.y - grid_origin.y) / TILE_SIZE;
+            if (x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE) {
+                selected_tile = (Vector2){ x, y };
+            }
+        }
 
         BeginDrawing();
         ClearBackground(BLACK);
@@ -86,8 +96,18 @@ int main(void) {
                         rect.x + 12,
                         rect.y +8
                     },
-                    20, 1, WHITE);
+                    20, 1, WHITE
+                );
             }
+        }
+
+        // Draw selected tile
+        if (selected_tile.x >= 0) {
+            DrawRectangleLinesEx((Rectangle) {
+                grid_origin.x + (selected_tile.x * TILE_SIZE),
+                grid_origin.y + (selected_tile.y * TILE_SIZE),
+                TILE_SIZE, TILE_SIZE
+            }, 2, YELLOW);
         }
 
         DrawTextEx(
