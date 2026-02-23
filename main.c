@@ -13,12 +13,14 @@ const char tile_chars[TILE_TYPES] = { '#', '@', '$', '%', '&' };
 
 char board[BOARD_SIZE][BOARD_SIZE];
 bool matched[BOARD_SIZE][BOARD_SIZE] = { 0 };
+float fall_offset[BOARD_SIZE][BOARD_SIZE] = { 0 };
 
 int score = 200;
 Vector2 grid_origin;
 Texture2D background;
 Font score_font;
 Vector2 selected_tile = { -1, -1 };
+float fall_speed = 8.0f;
 
 char random_tile() {
     return tile_chars[rand() % TILE_TYPES];
@@ -66,7 +68,11 @@ void resolve_matches() {
         int write_y = BOARD_SIZE - 1;
         for (int y = BOARD_SIZE -1; y >= 0; y--) {
             if (!matched[y][x]) {
-                board[write_y][x] = board[y][x];
+                if (y != write_y) {
+                    board[write_y][x] = board[y][x];
+                    fall_offset[write_y][x] = (write_y - y) * TILE_SIZE;
+                    board[y][x] = ' ';
+                }
                 write_y--;
             }
         }
@@ -74,6 +80,7 @@ void resolve_matches() {
         // fill empty spots with new random tiles
         while (write_y >= 0) {
             board[write_y][x] = random_tile();
+            fall_offset[write_y][x] = (write_y + 1) * TILE_SIZE;
             write_y--;
         }
     }
@@ -124,6 +131,17 @@ int main(void) {
             resolve_matches();
         }
 
+        for (int y = 0; y < BOARD_SIZE; y++) {
+            for (int x = 0; x < BOARD_SIZE; x++) {
+                if (fall_offset[y][x] > 0) {
+                    fall_offset[y][x] -= fall_speed;
+                    if (fall_offset[y][x] < 0) {
+                        fall_offset[y][x] = 0;
+                    }
+                }
+            }
+        }
+
         BeginDrawing();
         ClearBackground(BLACK);
 
@@ -150,15 +168,17 @@ int main(void) {
 
                 DrawRectangleLinesEx(rect, 1, DARKGRAY);
 
-                DrawTextEx(GetFontDefault(),
-                    TextFormat("%c", board[y][x]),
-                    (Vector2) {
-                        rect.x + 12,
-                        rect.y +8
-                    },
-                    20, 1,
-                    matched[y][x] ? GREEN : WHITE
-                );
+                if (board[y][x] != ' ') {
+                    DrawTextEx(GetFontDefault(),
+                        TextFormat("%c", board[y][x]),
+                        (Vector2) {
+                            rect.x + 12,
+                            rect.y + 8 - fall_offset[y][x]
+                        },
+                        20, 1,
+                        matched[y][x] ? GREEN : WHITE
+                    );
+                }
             }
         }
 
