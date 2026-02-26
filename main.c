@@ -24,6 +24,9 @@ float fall_speed = 8.0f;
 float match_delay_timer = 0.0f;
 const float MATCH_DELAY_DURATION = 0.2f;
 
+Music background_music;
+Sound match_sound;
+
 typedef enum {
     STATE_IDLE,
     STATE_ANIMATING,
@@ -63,6 +66,7 @@ bool find_matches() {
                     // update score
                     score += 10;
                     found = true;
+                    PlaySound(match_sound);
                 }
         }
     }
@@ -76,6 +80,7 @@ bool find_matches() {
                     // update score
                     score += 10;
                     found = true;
+                    PlaySound(match_sound);
                 }
         }
     }
@@ -139,14 +144,23 @@ int main(void) {
     SetTargetFPS(60);
     srand(time(NULL));
 
+    InitAudioDevice();
+
     background = LoadTexture("assets/background.jpg");
     score_font = LoadFontEx("assets/04B_03__.TTF", SCORE_FONT_SIZE, NULL, 0);
+    background_music = LoadMusicStream("assets/bgm.mp3");
+    match_sound = LoadSound("assets/match.wav");
+
+    PlayMusicStream(background_music),
 
     init_board();
     Vector2 mouse = { 0, 0 };
 
     while (!WindowShouldClose()) {
-        // game logic
+
+        UpdateMusicStream(background_music);
+
+        // update game logic
         mouse = GetMousePosition();
         if (tile_state == STATE_IDLE && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             int x = (mouse.x - grid_origin.x) / TILE_SIZE;
@@ -278,8 +292,13 @@ int main(void) {
         EndDrawing();
     }
 
+    StopMusicStream(background_music);
+    UnloadMusicStream(background_music);
+    UnloadSound(match_sound);
     UnloadTexture(background);
     UnloadFont(score_font);
+
+    CloseAudioDevice();
 
     CloseWindow();
     return 0;
