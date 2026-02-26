@@ -7,7 +7,8 @@
 #define BOARD_SIZE 8
 #define TILE_SIZE 42
 #define TILE_TYPES 5
-#define SCORE_FONT_SIZE 42
+#define SCORE_FONT_SIZE 32
+#define MAX_SCORE_POPUPS 32
 
 const char tile_chars[TILE_TYPES] = { '#', '@', '$', '%', '&' };
 
@@ -24,6 +25,10 @@ float fall_speed = 8.0f;
 float match_delay_timer = 0.0f;
 const float MATCH_DELAY_DURATION = 0.2f;
 
+float score_scale = 1.0f;
+float score_scale_velocity = 0.0f;
+bool score_animating = false;
+
 Music background_music;
 Sound match_sound;
 
@@ -34,6 +39,16 @@ typedef enum {
 } TileState;
 
 TileState tile_state;
+
+typedef struct {
+    Vector2 position;
+    int amount;
+    float lifetime;
+    float alpha;
+    bool active;
+} ScorePopup;
+
+ScorePopup score_popups[MAX_SCORE_POPUPS] = { 0 };
 
 char random_tile() {
     return tile_chars[rand() % TILE_TYPES];
@@ -47,6 +62,22 @@ void swap_tiles(int x1, int y1, int x2, int y2) {
 
 bool are_tiles_adjacent(Vector2 a, Vector2 b) {
     return (abs((int)a.x - (int)b.x) + abs((int)a.y - (int)b.y)) == 1;
+}
+
+void add_score_popup(int x, int y, int amount, Vector2 grid_origin) {
+    for (int i = 0; i < MAX_SCORE_POPUPS; i++) {
+        if (!score_popups[i].active) {
+            score_popups[i].position = (Vector2){
+                grid_origin.x + x * TILE_SIZE + TILE_SIZE / 2,
+                grid_origin.y + y * TILE_SIZE + TILE_SIZE / 2
+            };
+            score_popups[i].amount = amount;
+            score_popups[i].lifetime = 1.0f;
+            score_popups[i].alpha = 1.0f;
+            score_popups[i].active = true;
+            break;
+        }
+    }
 }
 
 bool find_matches() {
@@ -67,6 +98,12 @@ bool find_matches() {
                     score += 10;
                     found = true;
                     PlaySound(match_sound);
+
+                    score_animating = true;
+                    score_scale = 2.0f;
+                    score_scale_velocity = -2.5f;
+
+                    add_score_popup(x, y, 10, grid_origin);
                 }
         }
     }
@@ -81,6 +118,12 @@ bool find_matches() {
                     score += 10;
                     found = true;
                     PlaySound(match_sound);
+
+                    score_animating = true;
+                    score_scale = 2.0f;
+                    score_scale_velocity = -2.5f;
+
+                    add_score_popup(x, y, 10, grid_origin);
                 }
         }
     }
@@ -219,6 +262,28 @@ int main(void) {
             }
         }
 
+        // update the score popups array
+        for (int i = 0; i < MAX_SCORE_POPUPS; i++) {
+            if (score_popups[i].active) {
+                score_popups[i].lifetime -= GetFrameTime();
+                score_popups[i].position.y -= 30 * GetFrameTime();
+                score_popups[i].alpha -= score_popups[i].lifetime;
+
+                if (score_popups[i].lifetime <= 0.0f) {
+                    score_popups[i].active = false;
+                }
+            }
+        }
+
+        // update the score animation
+        if (score_animating) {
+            score_scale += score_scale_velocity * GetFrameTime();
+            if (score_scale <= 1.0f) {
+                score_scale = 1.0f;
+                score_animating = false;
+            }
+        }
+
         BeginDrawing();
         ClearBackground(BLACK);
 
@@ -282,12 +347,22 @@ int main(void) {
             (Vector2) {
                 20, 20
             },
-            SCORE_FONT_SIZE,
+            SCORE_FONT_SIZE * score_scale,
             1.0f,
             YELLOW
         );
 
-        // DrawText(TextFormat("SCORE: %d", score), 20, 20, 24, BLUE);
+        // draw score popups
+        for (int i = 0; i < MAX_SCORE_POPUPS; i++) {
+            if (score_popups[i].active) {
+                Color c = Fade(BLUE, score_popups[i].alpha);
+                DrawText(
+                    TextFormat("+%d", score_popups[i].amount),
+                    score_popups[i].position.x,
+                    score_popups[i].position.y,
+                    20, c);
+            }
+        }
 
         EndDrawing();
     }
